@@ -118,9 +118,12 @@ btn.addEventListener('click', async ()=>{
   const url = decodeURIComponent(urlParam);
   const csvUrl = makeCsvUrl(url);
   try{
-    try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e1){ console.warn('direct fetch failed',e1); }
+    // Try gviz first (works in iframes, no CORS issues)
+    try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e1){ console.warn('gviz failed',e1); }
+    // Then try proxy
     try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); await renderAndDownload(rows); return; }catch(e2){ console.warn('proxy failed', e2); }
-    try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
+    // Finally try direct
+    try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e3){ console.warn('direct fetch failed', e3); throw new Error('All methods failed'); }
   }catch(err){ setStatus('Failed: '+err.message); alert('Failed to load sheet. Check console.'); }
   finally{ btn.disabled = false; }
 });
