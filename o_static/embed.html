@@ -88,8 +88,9 @@ async function renderAndDownload(rows){
   const table = renderTable(rows);
   await new Promise(r=>setTimeout(r,150));
   setStatus('Converting to PNG...');
-  const canvas = await html2canvas(table, { scale: 2, backgroundColor: '#ffffff' });
-  const padding = 8;
+  const canvas = await html2canvas(table, { scale: 1.5, backgroundColor: '#ffffff', useCORS: true, logging: false });
+  console.log('Canvas size:', canvas.width, 'x', canvas.height);
+  const padding = 4;
   const padded = document.createElement('canvas');
   padded.width = canvas.width + padding*2;
   padded.height = canvas.height + padding*2;
@@ -118,12 +119,9 @@ btn.addEventListener('click', async ()=>{
   const url = decodeURIComponent(urlParam);
   const csvUrl = makeCsvUrl(url);
   try{
-    // Try gviz first (works in iframes, no CORS issues)
-    try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e1){ console.warn('gviz failed',e1); }
-    // Then try proxy
+    try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e1){ console.warn('direct fetch failed',e1); }
     try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); await renderAndDownload(rows); return; }catch(e2){ console.warn('proxy failed', e2); }
-    // Finally try direct
-    try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e3){ console.warn('direct fetch failed', e3); throw new Error('All methods failed'); }
+    try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
   }catch(err){ setStatus('Failed: '+err.message); alert('Failed to load sheet. Check console.'); }
   finally{ btn.disabled = false; }
 });
