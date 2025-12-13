@@ -88,8 +88,17 @@ async function renderAndDownload(rows){
   const table = renderTable(rows);
   await new Promise(r=>setTimeout(r,150));
   setStatus('Converting to PNG...');
-  const canvas = await html2canvas(table, { scale: 1.5, backgroundColor: '#ffffff', useCORS: true, logging: false });
-  console.log('Canvas size:', canvas.width, 'x', canvas.height);
+  const canvas = await html2canvas(table, {
+    scale: 1.5,
+    backgroundColor: '#ffffff',
+    useCORS: true,
+    allowTaint: true,
+    logging: false,
+    windowHeight: table.offsetHeight,
+    windowWidth: table.offsetWidth,
+    ignoreElements: (el) => el !== table && !table.contains(el)
+  });
+  console.log('Canvas size:', canvas.width, 'x', canvas.height, 'Table size:', table.offsetWidth, 'x', table.offsetHeight);
   const padding = 4;
   const padded = document.createElement('canvas');
   padded.width = canvas.width + padding*2;
