@@ -6,19 +6,29 @@
   <title>Download PNG</title>
   <style>
     html,body{height:100%;margin:0}
-    body{display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;background:#f6f6f6}
-    .btn{background:#007bff;color:#fff;border:none;padding:22px 36px;font-size:18px;border-radius:10px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.12)}
-    .status{position:fixed;left:16px;bottom:16px;font-size:13px;color:#333}
+    body{display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;padding:20px}
+    .container{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;max-width:90%;overflow-x:auto}
+    .btn{background:#007bff;color:#fff;border:none;padding:12px 24px;font-size:14px;border-radius:6px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);margin-right:8px}
+    .btn:hover{background:#0056b3}
+    .status{position:fixed;left:16px;bottom:16px;font-size:13px;color:#666;background:#fff;padding:8px 12px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.1)}
     #offscreen { position: absolute; left: -9999px; top: 0; width: fit-content; display: inline-block; }
-    table{border-collapse:collapse;background:#fff}
-    table th, table td{border:1px solid #ddd;padding:6px 10px;text-align:left}
+    table{border-collapse:collapse;background:#fff;margin:0}
+    table th, table td{border:1px solid #ddd;padding:8px 12px;text-align:left}
+    table th{background:#f8f9fa;font-weight:600}
+    #table-container{margin:0}
+    .button-group{margin-bottom:16px;display:flex;gap:8px}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
-  <button id="download" class="btn">Download PNG</button>
-  <div class="status" id="status">Ready</div>
+  <div class="container">
+    <div class="button-group">
+      <button id="download" class="btn">⬇️ Download PNG</button>
+    </div>
+    <div id="table-container"></div>
+  </div>
+  <div class="status" id="status">Loading...</div>
   <div id="offscreen" aria-hidden="true"></div>
 
 <script>
@@ -35,18 +45,19 @@ function makeCsvUrl(publishedUrl){
   catch(e){ return publishedUrl.includes('?') ? publishedUrl + '&output=csv' : publishedUrl + '?output=csv'; }
 }
 
-function renderTable(rows){
-  off.innerHTML = '';
+function renderTable(rows, displayOnScreen=false){
+  const targetEl = displayOnScreen ? document.getElementById('table-container') : off;
+  targetEl.innerHTML = '';
   const table = document.createElement('table');
   const thead = document.createElement('thead');
   const tbody = document.createElement('tbody');
-  if(!rows || rows.length===0){ off.textContent='No data'; return table; }
+  if(!rows || rows.length===0){ targetEl.textContent='No data'; return table; }
   const header = rows[0];
   const hr = document.createElement('tr');
   header.forEach(h => { const th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
   thead.appendChild(hr);
   for(let i=1;i<rows.length;i++){ const r = rows[i]; const tr = document.createElement('tr'); r.forEach(c=>{ const td=document.createElement('td'); td.textContent = c; tr.appendChild(td); }); tbody.appendChild(tr); }
-  table.appendChild(thead); table.appendChild(tbody); off.appendChild(table); return table;
+  table.appendChild(thead); table.appendChild(tbody); targetEl.appendChild(table); return table;
 }
 
 async function tryFetchCsv(csvUrl){
@@ -122,23 +133,37 @@ async function renderAndDownload(rows){
   }
 }
 
-btn.addEventListener('click', async ()=>{
-  btn.disabled = true;
-  setStatus('Starting...');
+async function loadAndDisplay(){
   const urlParam = getParam('url');
-  if(!urlParam){ setStatus('Missing url param'); btn.disabled = false; return; }
+  if(!urlParam){ setStatus('Missing url param'); return; }
   const url = decodeURIComponent(urlParam);
   const csvUrl = makeCsvUrl(url);
+  try{
+    setStatus('Loading data...');
+    try{ const rows = await tryFetchCsv(csvUrl); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e1){ console.warn('direct fetch failed',e1); }
+    try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e2){ console.warn('proxy failed', e2); }
+    try{ const rows = await loadViaGvizScript(url); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
+  }catch(err){ setStatus('Failed: '+err.message); console.error(err); }
+}
+
+async function downloadPng(){
+  const urlParam = getParam('url');
+  if(!urlParam){ setStatus('Missing url param'); return; }
+  const url = decodeURIComponent(urlParam);
+  const csvUrl = makeCsvUrl(url);
+  btn.disabled = true;
   try{
     try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e1){ console.warn('direct fetch failed',e1); }
     try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); await renderAndDownload(rows); return; }catch(e2){ console.warn('proxy failed', e2); }
     try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
-  }catch(err){ setStatus('Failed: '+err.message); alert('Failed to load sheet. Check console.'); }
+  }catch(err){ setStatus('Failed: '+err.message); }
   finally{ btn.disabled = false; }
-});
+}
 
-// Initialize status
-window.addEventListener('load', ()=>{ setStatus('Click "Download PNG" to start'); });
+btn.addEventListener('click', downloadPng);
+
+// Auto-load on page load
+window.addEventListener('load', loadAndDisplay);
 </script>
 </body>
 </html>
