@@ -88,36 +88,38 @@ async function renderAndDownload(rows){
   const table = renderTable(rows);
   await new Promise(r=>setTimeout(r,150));
   setStatus('Converting to PNG...');
-  const canvas = await html2canvas(table, {
-    scale: 1.5,
-    backgroundColor: '#ffffff',
-    useCORS: true,
-    allowTaint: true,
-    logging: false,
-    windowHeight: table.offsetHeight,
-    windowWidth: table.offsetWidth,
-    ignoreElements: (el) => el !== table && !table.contains(el)
-  });
-  console.log('Canvas size:', canvas.width, 'x', canvas.height, 'Table size:', table.offsetWidth, 'x', table.offsetHeight);
-  const padding = 4;
-  const padded = document.createElement('canvas');
-  padded.width = canvas.width + padding*2;
-  padded.height = canvas.height + padding*2;
-  const ctx = padded.getContext('2d');
-  ctx.fillStyle='#ffffff';
-  ctx.fillRect(0,0,padded.width,padded.height);
-  ctx.drawImage(canvas,padding,padding);
-  padded.toBlob(function(blob){
-    const a = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    a.href = url;
-    a.download = (new Date()).toISOString().slice(0,10)+'_postemensuels.png';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    setStatus('Done! Check your Downloads folder.');
-  }, 'image/png');
+  try{
+    const canvas = await html2canvas(table, {
+      scale: 1.5,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      logging: false
+    });
+    console.log('Canvas size:', canvas.width, 'x', canvas.height);
+    const padding = 4;
+    const padded = document.createElement('canvas');
+    padded.width = canvas.width + padding*2;
+    padded.height = canvas.height + padding*2;
+    const ctx = padded.getContext('2d');
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,padded.width,padded.height);
+    ctx.drawImage(canvas,padding,padding);
+    padded.toBlob(function(blob){
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = (new Date()).toISOString().slice(0,10)+'_postemensuels.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus('Done! Check your Downloads folder.');
+    }, 'image/png');
+  }catch(err){
+    console.error('Canvas error:', err);
+    setStatus('Error converting to PNG: '+err.message);
+  }
 }
 
 btn.addEventListener('click', async ()=>{
