@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Embedded Download</title>
+  <style>
+    html,body{height:100%;margin:0}
+    body{display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;background:#fafafa}
+    .status{font-size:14px;color:#333;padding:12px}
+    table{border-collapse:collapse}
+    table th, table td{border:1px solid #ddd;padding:6px 10px}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="status" id="status">Starting...</div>
+  <div id="offscreen" style="position:absolute;left:-9999px;top:0"></div>
+<script>
+const statusEl = document.getElementById('status');
+const off = document.getElementById('offscreen');
+const DEFAULT_PROXY = 'https://api.allorigins.win/raw?url=';
+
+function setStatus(s){ statusEl.textContent = s; }
+function getParam(name){ const u = new URL(location.href); return u.searchParams.get(name); }
+function makeCsvUrl(publishedUrl){ try{ const u=new URL(publishedUrl); u.searchParams.set('output','csv'); return u.toString(); }catch(e){ return publishedUrl.includes('?')? publishedUrl+'&output=csv': publishedUrl+'?output=csv'; } }
+
+function renderTable(rows){ off.innerHTML=''; const table=document.createElement('table'); const thead=document.createElement('thead'); const tbody=document.createElement('tbody'); if(!rows||rows.length===0){ off.textContent='No data'; return table; } const header=rows[0]; const hr=document.createElement('tr'); header.forEach(h=>{ const th=document.createElement('th'); th.textContent=h; hr.appendChild(th); }); thead.appendChild(hr); for(let i=1;i<rows.length;i++){ const r=rows[i]; const tr=document.createElement('tr'); r.forEach(c=>{ const td=document.createElement('td'); td.textContent=c; tr.appendChild(td); }); tbody.appendChild(tr); } table.appendChild(thead); table.appendChild(tbody); off.appendChild(table); return table; }
+
+async function tryFetchCsv(csvUrl){ setStatus('Fetching CSV...'); const res = await fetch(csvUrl); if(!res.ok) throw new Error('Fetch failed: '+res.status); const txt = await res.text(); const parsed = Papa.parse(txt.trim()); return parsed.data; }
+
+function extractIdsFromUrl(url){ try{ const u=new URL(url); const m = u.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/); const id = m?m[1]:null; const gid = u.searchParams.get('gid')||null; return {id,gid}; }catch(e){return {id:null,gid:null}} }
+function loadViaGvizScript(publishedUrl){ return new Promise((resolve,reject)=>{ const {id,gid} = extractIdsFromUrl(publishedUrl); if(!id) return reject(new Error('No spreadsheet id found')); const sheetGid = gid||'0'; const src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?gid=${sheetGid}&tqx=out:json`; const handler = function(resp){ try{ const cols = (resp.table && resp.table.cols)||[]; const rows=(resp.table && resp.table.rows)||[]; const header = cols.map(c=> (c && (c.label||c.id))||''); const data=[header]; rows.forEach(r=>{ const cells=(r.c||[]).map(cell=> (cell && (cell.v!=null?cell.v:''))||''); data.push(cells); }); resolve(data); }catch(err){ reject(err); } finally{ if(script && script.parentNode) script.parentNode.removeChild(script); delete window.google?.visualization?.Query?.setResponse; } }; window.google = window.google||{}; window.google.visualization = window.google.visualization||{}; window.google.visualization.Query = window.google.visualization.Query || {}; window.google.visualization.Query.setResponse = handler; const script = document.createElement('script'); script.src = src; script.onerror = ()=>{ script.remove(); reject(new Error('gviz load error')); }; document.head.appendChild(script); }); }
+
+async function renderAndDownload(rows){ setStatus('Rendering...'); const table = renderTable(rows); await new Promise(r=>setTimeout(r,120)); setStatus('Converting to PNG...'); const canvas = await html2canvas(table, { scale: 2, backgroundColor: '#ffffff' }); const padding = parseInt(getParam('padding')||'8')||8; const padded = document.createElement('canvas'); padded.width = canvas.width + padding*2; padded.height = canvas.height + padding*2; const ctx = padded.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,padded.width,padded.height); ctx.drawImage(canvas,padding,padding); padded.toBlob(function(blob){ const a = document.createElement('a'); const url = URL.createObjectURL(blob); a.href = url; a.download = (new Date()).toISOString().slice(0,10)+'_postemensuels.png'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url); setStatus('Downloaded'); if(getParam('close')==='1'){ setTimeout(()=>{ try{ window.parent.postMessage({ downloaded: true }, '*'); }catch(e){} }, 200); } }, 'image/png'); }
+
+// Main
+(async function(){ try{ const urlParam = getParam('url'); if(!urlParam){ setStatus('Missing url param.'); return; } const url = decodeURIComponent(urlParam); const csvUrl = makeCsvUrl(url); // try fetch
+ try{ const rows = await tryFetchCsv(csvUrl); await renderAndDownload(rows); return; }catch(e){ console.warn('direct fetch failed',e); }
+ // try proxy
+ try{ const rows = await tryFetchCsv(DEFAULT_PROXY + encodeURIComponent(csvUrl)); await renderAndDownload(rows); return; }catch(e){ console.warn('proxy failed',e); }
+ // try gviz
+ try{ const rows = await loadViaGvizScript(url); await renderAndDownload(rows); return; }catch(e){ console.warn('gviz failed', e); throw new Error('All methods failed'); }
+ }catch(err){ setStatus('Error: '+err.message); console.error(err); } })();
+
+</script>
+</body>
+</html>

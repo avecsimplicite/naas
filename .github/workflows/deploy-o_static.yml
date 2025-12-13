@@ -1,0 +1,26 @@
+name: Deploy o_static to GitHub Pages
+
+on:
+  push:
+    # Trigger on both main and master to match common repo default names
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload o_static as Pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: ./o_static
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v1

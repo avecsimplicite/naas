@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Postes Mensuels — Client-only PNG</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; max-width:900px; margin:28px auto; padding:0 18px; }
+    .card { padding:18px; border:1px solid #ddd; border-radius:8px; margin-bottom:16px }
+    input[type=text] { width:100%; padding:10px; margin:8px 0 12px 0 }
+    button { background:#0b6; color:#fff; border:none; padding:10px 14px; border-radius:6px; cursor:pointer }
+    .muted { color:#666; font-size:0.9rem }
+    table { border-collapse: collapse; width:100%; }
+    table th, table td { border:1px solid #ddd; padding:6px 8px; }
+    #previewWrap { overflow:auto; max-height:70vh; border:1px dashed #ccc; padding:10px; }
+  </style>
+  <!-- html2canvas (for screenshot) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- PapaParse (robust CSV parser) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="card">
+    <h2>Client-only: Generate PNG from a published Google Sheet</h2>
+    <p class="muted">This page loads the published CSV from a Google Sheet, renders it in the browser, then converts the table to a PNG you can download — no Python required.</p>
+
+    <label for="sheetUrl">Published sheet URL (or paste your existing "Publish to web" URL):</label>
+    <input id="sheetUrl" type="text" placeholder="https://docs.google.com/.../pub?gid=...&single=true&" />
+
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px">
+      <button id="loadBtn">Load & Render Table</button>
+      <button id="downloadBtn" disabled>Download PNG</button>
+      <button id="openCsvBtn" style="background:#08f;">Open CSV</button>
+    </div>
+
+    <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap:wrap">
+      <label style="display:inline-flex; gap:8px; align-items:center;">
+        <input id="showColControls" type="checkbox" /> Show column sliders
+      </label>
+      <button id="autoFitBtn" style="background:#444;">Auto-fit columns</button>
+      <button id="resetColsBtn" style="background:#666;">Reset column widths</button>
+      <label style="display:inline-flex; gap:8px; align-items:center;">
+        <input id="useProxy" type="checkbox" /> Use CORS proxy
+      </label>
+      <input id="proxyBase" type="text" value="https://api.allorigins.win/raw?url=" style="width:320px" />
+      <label style="display:inline-flex; gap:8px; align-items:center;">
+        <input id="useScript" type="checkbox" /> Load via script (no server required)
+      </label>
+      <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+        <label class="muted">Padding(px): <input id="cropPadding" type="number" value="8" style="width:72px; margin-left:6px" /></label>
+        <label class="muted">Max width(px): <input id="maxWidth" type="number" placeholder="auto" style="width:84px; margin-left:6px" /></label>
+        <label class="muted">Scale: <input id="renderScale" type="number" value="2" min="1" max="3" step="0.5" style="width:64px; margin-left:6px" /></label>
+      </div>
+    </div>
+
+    <div id="colControls" style="display:none; gap:8px; flex-wrap:wrap; margin-bottom:10px"></div>
+
+    <p class="muted">If the sheet isn't published to the web you must publish it (File → Publish to web) or use a CORS proxy.</p>
+    <p class="muted">If you open this file via <code>file://</code> some browsers block fetching; run a local static server instead: <code>python -m http.server 8000</code>.</p>
+  </div>
+
+  <div class="card">
+    <h3>Preview</h3>
+    <div id="previewWrap">
+      <div id="tableContainer">No table loaded yet.</div>
+    </div>
+  </div>
+
+<script>
+const defaultUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnl8-YerEduI_wn45FLg36yEr2_na23Hrlk-txjYKuz5DxABxZcnuKxsNiqYNcMv3ulGEPveEKiAtP/pub?gid=665461249&single=true&";
+
+const sheetUrlInput = document.getElementById('sheetUrl');
+const loadBtn = document.getElementById('loadBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const openCsvBtn = document.getElementById('openCsvBtn');
+const tableContainer = document.getElementById('tableContainer');
+
+sheetUrlInput.value = defaultUrl;
+
+function makeCsvUrl(publishedUrl) {
+  // If the URL already contains output=csv, return it
+  try {
+    const u = new URL(publishedUrl);
+    if (u.searchParams.get('output') === 'csv') return publishedUrl;
+    // If it's a docs google sheets pub url, add output=csv
+    u.searchParams.set('output', 'csv');
+    return u.toString();
+  } catch (e) {
+    // Fallback: append &output=csv
+    if (publishedUrl.includes('?')) return publishedUrl + '&output=csv';
+    return publishedUrl + '?output=csv';
+  }
+}
+
+function renderTableFromArray(rows) {
+  if (!rows || rows.length === 0) {
+    tableContainer.innerHTML = '<div class="muted">No data</div>';
+    return;
+  }
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+
+  // Use first row as header
+  const headerRow = document.createElement('tr');
+  rows[0].forEach(cell => {
+    const th = document.createElement('th');
+    th.textContent = cell;
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    const tr = document.createElement('tr');
+    r.forEach(cell => {
+      const td = document.createElement('td');
+      td.textContent = cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+
+  table.appendChild(thead);
+  table.appendChild(tbody);
+  tableContainer.innerHTML = '';
+  tableContainer.appendChild(table);
+
+  // After rendering, build column controls
+  createColumnControls(rows[0] || []);
+}
+
+function createColumnControls(headers) {
+  const container = document.getElementById('colControls');
+  container.innerHTML = '';
+  if (!headers || headers.length === 0) return;
+
+  headers.forEach((h, idx) => {
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.alignItems = 'center';
+    wrap.style.gap = '8px';
+    wrap.style.marginRight = '8px';
+
+    const label = document.createElement('label');
+    label.textContent = h || `Col ${idx+1}`;
+    label.style.fontSize = '0.85rem';
+    label.style.maxWidth = '160px';
+    label.style.overflow = 'hidden';
+    label.style.textOverflow = 'ellipsis';
+    label.style.whiteSpace = 'nowrap';
+
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.min = 50;
+    input.max = 800;
+    input.value = 150;
+    input.dataset.col = idx + 1;
+    input.style.width = '140px';
+
+    input.addEventListener('input', () => {
+      setColumnWidth(parseInt(input.dataset.col), input.value);
+    });
+
+    wrap.appendChild(label);
+    wrap.appendChild(input);
+    container.appendChild(wrap);
+  });
+}
+
+function setColumnWidth(colIndex, widthPx) {
+  const table = tableContainer.querySelector('table');
+  if (!table) return;
+  // Use fixed table layout when applying widths
+  table.style.tableLayout = 'fixed';
+  // Set width on header and cells
+  const ths = table.querySelectorAll(`th:nth-child(${colIndex})`);
+  const tds = table.querySelectorAll(`td:nth-child(${colIndex})`);
+  ths.forEach(el => el.style.width = widthPx + 'px');
+  tds.forEach(el => el.style.width = widthPx + 'px');
+}
+
+function autoFitColumns() {
+  const table = tableContainer.querySelector('table');
+  if (!table) return;
+  table.style.tableLayout = 'auto';
+  // Remove explicit widths
+  table.querySelectorAll('th, td').forEach(el => el.style.width = '');
+}
+
+function resetColumnControls() {
+  const container = document.getElementById('colControls');
+  container.querySelectorAll('input[type=range]').forEach(inp => inp.value = 150);
+  autoFitColumns();
+}
+
+async function loadAndRender() {
+  const publishedUrl = sheetUrlInput.value.trim();
+  if (!publishedUrl) {
+    alert('Paste the published sheet URL first.');
+    return;
+  }
+  const csvUrl = makeCsvUrl(publishedUrl);
+  openCsvBtn.dataset.csv = csvUrl;
+
+  tableContainer.innerHTML = '<div class="muted">Loading…</div>';
+
+  try {
+    // If user selected script loader, try the Google gviz JSON loader (works without a webserver)
+    const useScript = document.getElementById('useScript').checked;
+    if (useScript) {
+      await loadViaGvizScript(publishedUrl);
+      downloadBtn.disabled = false;
+      return;
+    }
+
+    // Optionally use a CORS proxy for fetch
+    const useProxy = document.getElementById('useProxy').checked;
+    const proxyBase = document.getElementById('proxyBase').value.trim();
+    const fetchUrl = useProxy && proxyBase ? (proxyBase + encodeURIComponent(csvUrl)) : csvUrl;
+
+    const res = await fetch(fetchUrl);
+    if (!res.ok) throw new Error('Fetch failed: ' + res.status);
+    const text = await res.text();
+    // Parse CSV using PapaParse
+    const parsed = Papa.parse(text.trim());
+    if (parsed.errors && parsed.errors.length) {
+      console.warn('CSV parse warnings:', parsed.errors);
+    }
+    renderTableFromArray(parsed.data);
+    downloadBtn.disabled = false;
+  } catch (err) {
+    console.error(err);
+    tableContainer.innerHTML = '<div class="muted">Error loading CSV — possible CORS or not published. See README.</div>';
+    downloadBtn.disabled = true;
+    alert('Error loading sheet. Check that the sheet is published to the web (File → Publish to web). If it is, CORS may still block fetch in some browsers; run a local server or use a CORS proxy.');
+  }
+}
+
+// Load sheet using Google gviz script (executes without CORS because it's loaded as a script tag)
+function extractIdsFromUrl(url) {
+  try {
+    const u = new URL(url);
+    // Try /d/{id}/
+    const m = u.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    const id = m ? m[1] : null;
+    const gid = u.searchParams.get('gid') || null;
+    return { id, gid };
+  } catch (e) {
+    return { id: null, gid: null };
+  }
+}
+
+function loadViaGvizScript(publishedUrl) {
+  return new Promise((resolve, reject) => {
+    const { id, gid } = extractIdsFromUrl(publishedUrl);
+    if (!id) {
+      reject(new Error('Cannot extract spreadsheet id from URL. Try the published-to-web URL or the edit URL containing /d/{id}/.'));
+      return;
+    }
+
+    const sheetGid = gid || '0';
+    const src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?gid=${sheetGid}&tqx=out:json`;
+
+    // Create a temporary handler for google.visualization.Query.setResponse
+    const oldGoogle = window.google;
+    window.google = window.google || {};
+    window.google.visualization = window.google.visualization || {};
+
+    const handler = function(resp) {
+      try {
+        // Convert gviz response to rows
+        const cols = (resp.table && resp.table.cols) || [];
+        const rows = (resp.table && resp.table.rows) || [];
+        const header = cols.map(c => (c && (c.label || c.id)) || '');
+        const data = [header];
+        rows.forEach(r => {
+          const cells = (r.c || []).map(cell => (cell && (cell.v != null ? cell.v : '')) || '');
+          data.push(cells);
+        });
+        renderTableFromArray(data);
+        resolve();
+      } catch (err) {
+        reject(err);
+      } finally {
+        // cleanup: remove script tag and restore google
+        if (script && script.parentNode) script.parentNode.removeChild(script);
+        window.google = oldGoogle;
+      }
+    };
+
+    // install the handler
+    window.google.visualization.Query.setResponse = handler;
+
+    const script = document.createElement('script');
+    script.src = src;
+    script.onerror = function(e) {
+      // restore
+      window.google = oldGoogle;
+      reject(new Error('Failed to load gviz script'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
+loadBtn.addEventListener('click', (e) => { e.preventDefault(); loadAndRender(); });
+openCsvBtn.addEventListener('click', (e) => {
+  const csv = openCsvBtn.dataset.csv || makeCsvUrl(sheetUrlInput.value.trim());
+  const useProxy = document.getElementById('useProxy').checked;
+  const proxyBase = document.getElementById('proxyBase').value.trim();
+  const openUrl = useProxy && proxyBase ? (proxyBase + encodeURIComponent(csv)) : csv;
+  window.open(openUrl, '_blank');
+});
+
+downloadBtn.addEventListener('click', async () => {
+  // find the table element and render to canvas
+  const el = tableContainer.querySelector('table');
+  if (!el) { alert('No table to screenshot.'); return; }
+  downloadBtn.disabled = true;
+  downloadBtn.textContent = 'Rendering…';
+  try {
+    const scale = parseFloat(document.getElementById('renderScale').value) || 2;
+    const padding = parseInt(document.getElementById('cropPadding').value) || 0;
+    const maxWidthVal = parseInt(document.getElementById('maxWidth').value) || null;
+
+    const canvas = await html2canvas(el, { scale: scale, backgroundColor: '#ffffff' });
+
+    // Apply maxWidth scaling if requested
+    let finalCanvas = canvas;
+    if (maxWidthVal && canvas.width > maxWidthVal) {
+      const ratio = maxWidthVal / canvas.width;
+      const tmp = document.createElement('canvas');
+      tmp.width = Math.round(canvas.width * ratio);
+      tmp.height = Math.round(canvas.height * ratio);
+      const ctx = tmp.getContext('2d');
+      ctx.drawImage(canvas, 0, 0, tmp.width, tmp.height);
+      finalCanvas = tmp;
+    }
+
+    // Apply padding by drawing onto a larger canvas
+    if (padding > 0) {
+      const padded = document.createElement('canvas');
+      padded.width = finalCanvas.width + padding * 2;
+      padded.height = finalCanvas.height + padding * 2;
+      const pctx = padded.getContext('2d');
+      pctx.fillStyle = '#ffffff';
+      pctx.fillRect(0, 0, padded.width, padded.height);
+      pctx.drawImage(finalCanvas, padding, padding);
+      finalCanvas = padded;
+    }
+
+    finalCanvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = (new Date()).toISOString().slice(0,10) + '_postemensuels.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, 'image/png');
+  } catch (err) {
+    console.error(err);
+    alert('Failed to render PNG: ' + err.message);
+  } finally {
+    downloadBtn.disabled = false;
+    downloadBtn.textContent = 'Download PNG';
+  }
+});
+
+// UI wiring for column controls and cropping
+document.getElementById('showColControls').addEventListener('change', (e) => {
+  const c = document.getElementById('colControls');
+  c.style.display = e.target.checked ? 'flex' : 'none';
+});
+document.getElementById('autoFitBtn').addEventListener('click', (e) => { e.preventDefault(); autoFitColumns(); });
+document.getElementById('resetColsBtn').addEventListener('click', (e) => { e.preventDefault(); resetColumnControls(); });
+
+// Auto-load default on open
+window.addEventListener('load', () => {
+  // Optionally auto-load — comment out if you prefer manual
+  // loadAndRender();
+});
+</script>
+</body>
+</html>
