@@ -18,13 +18,22 @@
     table th{background:#f8f9fa;font-weight:600}
     #table-container{margin:0}
     .button-group{margin-bottom:16px;display:flex;gap:8px}
+    .loading-spinner{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+    .spinner{display:inline-block;width:24px;height:24px;border:3px solid #f3f3f3;border-top:3px solid #007bff;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .loading-text{font-size:16px;color:#007bff;font-weight:500}
+    #download{display:none}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <div class="button-group">
+    <div id="loading" class="loading-spinner">
+      <div class="spinner"></div>
+      <div class="loading-text">Traitement en cours...</div>
+    </div>
+    <div class="button-group" id="button-group" style="display:none">
       <button id="download" class="btn">⬇️ Download PNG</button>
     </div>
     <div id="table-container"></div>
@@ -40,8 +49,12 @@ const PROXY = 'https://api.allorigins.win/raw?url='; // fallback proxy
 const statusEl = document.getElementById('status');
 const off = document.getElementById('offscreen');
 const btn = document.getElementById('download');
+const loadingEl = document.getElementById('loading');
+const buttonGroupEl = document.getElementById('button-group');
 
 function setStatus(s){ statusEl.textContent = s; }
+function showLoading(){ if(loadingEl) loadingEl.style.display = 'flex'; if(buttonGroupEl) buttonGroupEl.style.display = 'none'; }
+function hideLoading(){ if(loadingEl) loadingEl.style.display = 'none'; if(buttonGroupEl) buttonGroupEl.style.display = 'flex'; }
 
 function makeCsvUrl(publishedUrl){
   try{ const u = new URL(publishedUrl); u.searchParams.set('output','csv'); return u.toString(); }
@@ -141,13 +154,17 @@ async function renderAndDownload(rows){
 }
 
 async function loadAndDisplay(){
+  showLoading();
   const csvUrl = makeCsvUrl(DEFAULT_URL);
   try{
-    setStatus('Loading data...');
-    try{ const rows = await tryFetchCsv(csvUrl); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e1){ console.warn('direct fetch failed',e1); }
-    try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e2){ console.warn('proxy failed', e2); }
-    try{ const rows = await loadViaGvizScript(DEFAULT_URL); renderTable(rows, true); setStatus('Ready - Click "Download PNG" to export'); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
-  }catch(err){ setStatus('Failed: '+err.message); console.error(err); }
+    try{ const rows = await tryFetchCsv(csvUrl); renderTable(rows, true); hideLoading(); return; }catch(e1){ console.warn('direct fetch failed',e1); }
+    try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); renderTable(rows, true); hideLoading(); return; }catch(e2){ console.warn('proxy failed', e2); }
+    try{ const rows = await loadViaGvizScript(DEFAULT_URL); renderTable(rows, true); hideLoading(); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
+  }catch(err){
+    hideLoading();
+    setStatus('Failed: '+err.message);
+    console.error(err);
+  }
 }
 
 btn.addEventListener('click', async ()=>{
