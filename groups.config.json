@@ -1,0 +1,22 @@
+{
+  "groups": {
+    "naas": {
+      "name": "NAAS",
+      "description": "Posts mensuels",
+      "googleSheetUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnl8-YerEduI_wn45FLg36yEr2_na23Hrlk-txjYKuz5DxABxZcnuKxsNiqYNcMv3ulGEPveEKiAtP/pub?gid=665461249&single=true&",
+      "groupSiteUrl": "https://sites.google.com/jgwill.com/serviteur/accueil",
+      "outputFolder": "o_static",
+      "filename": "minimal.html",
+      "downloadName": "postemensuels"
+    },
+    "onqt": {
+      "name": "ONQT",
+      "description": "Publications mensuelles",
+      "googleSheetUrl": "YOUR_ONQT_GOOGLE_SHEET_URL_HERE",
+      "groupSiteUrl": "YOUR_ONQT_GROUP_SITE_URL_HERE",
+      "outputFolder": "onqt_static",
+      "filename": "minimal.html",
+      "downloadName": "publications_onqt"
+    }
+  }
+}

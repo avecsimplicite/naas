@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Download PNG — NAAS</title>
+  <title>Download PNG — {{GROUP_NAME}}</title>
   <style>
     html,body{height:100%;margin:0}
     body{display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;padding:20px}
@@ -33,7 +33,7 @@
       <div class="loading-text">Traitement en cours...</div>
     </div>
     <div class="button-group" id="button-group" style="display:none">
-      <a href="https://sites.google.com/jgwill.com/serviteur/accueil" target="_blank" class="btn">🔙 Retour au site du groupe</a>
+      <a href="{{GROUP_SITE_URL}}" target="_blank" class="btn">🔙 Retour au site du groupe</a>
       <button id="download" class="btn">⬇️ Download PNG</button>
     </div>
     <div id="table-container"></div>
@@ -44,9 +44,9 @@
 
 <script>
 // Minimal single-click downloader
-const DEFAULT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnl8-YerEduI_wn45FLg36yEr2_na23Hrlk-txjYKuz5DxABxZcnuKxsNiqYNcMv3ulGEPveEKiAtP/pub?gid=665461249&single=true&";
+const DEFAULT_URL = "{{GOOGLE_SHEET_URL}}";
 const PROXY = 'https://api.allorigins.win/raw?url='; // fallback proxy
-const DOWNLOAD_FILENAME = "postemensuels";
+const DOWNLOAD_FILENAME = "{{DOWNLOAD_NAME}}";
 const statusEl = document.getElementById('status');
 const off = document.getElementById('offscreen');
 const btn = document.getElementById('download');
