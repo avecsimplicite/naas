@@ -18,7 +18,48 @@ naas/
 
 ## Adding a New Group
 
-### Step 1: Update Configuration
+### ⭐ RECOMMENDED: Interactive Setup (Easiest)
+
+Just run the interactive setup script - it handles everything!
+
+```bash
+python setup_new_group.py
+```
+
+The script will:
+1. ✅ Ask for group name
+2. ✅ Ask for display name
+3. ✅ Ask for Google Sheet URL (validates it's published)
+4. ✅ Ask for group website URL
+5. ✅ Generate `minimal.html` automatically
+6. ✅ Update `groups.config.json`
+7. ✅ Commit and push to main
+8. ✅ Show you the final deployed URL
+
+**Example interaction:**
+```
+🚀 New Group Setup
+──────────────────
+Group name (lowercase, e.g., 'mycommunity'): mycommunity
+Group display name (e.g., 'My Community'): My Community
+Google Sheet URL: https://docs.google.com/spreadsheets/d/e/2PACX-1v.../pub?gid=123456&single=true
+Group website URL (e.g., 'https://mygroup.example.com'): https://mycommunity.example.com
+
+✅ Updated groups.config.json
+✅ Generated mycommunity_static/minimal.html
+✅ Committed and pushed to main
+
+✨ mycommunity is ready!
+Live URL: https://avecsimplicite.github.io/naas/mycommunity_static/minimal.html
+```
+
+---
+
+### Alternative: Manual Configuration
+
+If you prefer manual control, you can edit files directly:
+
+#### Step 1: Update Configuration
 
 Edit `groups.config.json` and add your group:
 
@@ -43,7 +84,7 @@ Edit `groups.config.json` and add your group:
 - Include the `&` at the end so the script can add `output=csv`
 - `outputFolder` should follow the pattern `{groupname}_static`
 
-### Step 2: Generate the HTML
+#### Step 2: Generate the HTML
 
 ```bash
 # Generate all groups
@@ -62,7 +103,14 @@ The script will:
 - ✅ Create output folders if needed
 - ✅ Write `minimal.html` files
 
-### Step 3: Deploy
+#### Step 3: Deploy
+
+Commit and push your changes:
+```bash
+git add groups.config.json yourgroup_static/minimal.html
+git commit -m "Add yourgroup to minimal.html system"
+git push
+```
 
 Each group's HTML file is in its own folder and ready to be served:
 - NAAS: `o_static/minimal.html`

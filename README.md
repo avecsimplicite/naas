@@ -10,7 +10,8 @@ Automated periodic capture and preservation of Google Sheets content as high-qua
 
 - [Overview](#overview)
 - [Features](#features)
-- [Quick Start](#quick-start)
+- [⭐ Quick Start: Minimal HTML System (NEW)](#-quick-start-minimal-html-system-new)
+- [Quick Start: Sheet Capture (Python)](#quick-start-sheet-capture-python)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -60,7 +61,38 @@ NAAS automates the capture of Google Sheets iframes as high-quality PNG screensh
 
 ---
 
-## Quick Start
+## ⭐ Quick Start: Minimal HTML System (NEW)
+
+**Want to create an interactive webpage that displays Google Sheets data?**
+
+Try the new **reusable minimal.html template system** - perfect for groups and organizations!
+
+```bash
+# Simply run the interactive setup:
+python setup_new_group.py
+
+# Answer a few questions:
+# - Group name: mycommunity
+# - Display name: My Community
+# - Google Sheet URL: https://docs.google.com/spreadsheets/d/e/...
+# - Group website: https://mygroup.example.com
+
+# Done! Your page is live at:
+# https://avecsimplicite.github.io/naas/mycommunity_static/minimal.html
+```
+
+**Features:**
+- ✅ Automatic table loading from Google Sheets
+- ✅ Download table as PNG with one click
+- ✅ Link back to your group website
+- ✅ Mobile-friendly responsive design
+- ✅ Multiple groups in one repository
+
+👉 **See [MINIMAL_SYSTEM.md](./MINIMAL_SYSTEM.md) for complete documentation**
+
+---
+
+## Quick Start: Sheet Capture (Python)
 
 ### 1. Installation
 
@@ -569,24 +601,48 @@ This project is licensed under the MIT License - see LICENSE file for details.
 
 ```
 naas/
-├── README.md                    # This file
-├── LICENSE                      # MIT License
-├── requirements.txt             # Python dependencies
-├── postemensuels.py            # Main capture script
-├── FEATURE_DESCRIPTION.md      # Detailed technical documentation
-├── TRANSLATION_TEMPLATE.md     # i18n translation guide
+├── README.md                         # This file
+├── LICENSE                           # MIT License
+├── requirements.txt                  # Python dependencies
+├── postemensuels.py                 # Main capture script
+├── FEATURE_DESCRIPTION.md           # Detailed technical documentation
+├── TRANSLATION_TEMPLATE.md          # i18n translation guide
+│
+├── 📁 MINIMAL HTML TEMPLATE SYSTEM (NEW)
+├── setup_new_group.py               # Interactive group setup (⭐ recommended)
+├── generate_minimal.py              # HTML generator script
+├── groups.config.json               # Configuration for all groups
+├── minimal.template.html            # Reusable HTML template
+├── MINIMAL_SYSTEM.md                # Complete system documentation
+├── o_static/
+│   └── minimal.html                 # NAAS group page
+├── onqt_static/
+│   └── minimal.html                 # ONQT group page
+├── {groupname}_static/
+│   └── minimal.html                 # Additional groups...
+│
 ├── examples/
-│   ├── basic_capture.py        # Simple usage example
-│   ├── scheduled_captures.py   # Cron scheduling example
-│   └── batch_processing.py     # Multiple sheets example
+│   ├── basic_capture.py             # Simple usage example
+│   ├── scheduled_captures.py        # Cron scheduling example
+│   └── batch_processing.py          # Multiple sheets example
 ├── tests/
-│   ├── test_capture.py         # Unit tests
-│   └── test_integration.py     # Integration tests
+│   ├── test_capture.py              # Unit tests
+│   └── test_integration.py          # Integration tests
 └── docs/
-    ├── INSTALLATION.md         # Detailed setup guide
-    ├── TROUBLESHOOTING.md      # Common issues & fixes
-    └── API.md                  # API reference
+    ├── INSTALLATION.md              # Detailed setup guide
+    ├── TROUBLESHOOTING.md           # Common issues & fixes
+    └── API.md                       # API reference
 ```
+
+### New Components (Minimal HTML System)
+
+| File | Purpose |
+|------|---------|
+| `setup_new_group.py` | **Interactive script** to add new groups (no manual editing needed) |
+| `generate_minimal.py` | Generator that creates HTML from template + config |
+| `groups.config.json` | Centralized configuration for all groups |
+| `minimal.template.html` | Single source of truth for the HTML template |
+| `MINIMAL_SYSTEM.md` | Complete documentation for the reusable system |
 
 ---
 
