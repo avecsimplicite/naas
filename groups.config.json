@@ -5,8 +5,8 @@
       "description": "Posts mensuels",
       "googleSheetUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vRnl8-YerEduI_wn45FLg36yEr2_na23Hrlk-txjYKuz5DxABxZcnuKxsNiqYNcMv3ulGEPveEKiAtP/pub?gid=665461249&single=true&",
       "groupSiteUrl": "https://sites.google.com/jgwill.com/serviteur/accueil",
-      "outputFolder": "o_static",
-      "filename": "minimal.html",
+      "outputFolder": ".",
+      "filename": "naas.html",
       "downloadName": "postemensuels"
     },
     "onqt": {
@@ -14,8 +14,8 @@
       "description": "Publications mensuelles",
       "googleSheetUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vSNsSRZD9-pPqyIqRFZ_J3VScP5yOpFUOqIoyuYtSmDdL12-GeGE2SWIc-8ncHotOZf0G0N9rXhSwtN/pub?gid=634347005&single=true&",
       "groupSiteUrl": "https://sites.google.com/jgwill.com/onqt/home",
-      "outputFolder": "onqt_static",
-      "filename": "minimal.html",
+      "outputFolder": ".",
+      "filename": "onqt.html",
       "downloadName": "publications_onqt"
     }
   }

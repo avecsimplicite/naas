@@ -186,19 +186,19 @@ def write_html_file(folder_path, html_content):
         return None
 
 
-def git_commit_and_push(group_name, folder_name):
+def git_commit_and_push(group_name, html_filename):
     """Commit and push changes to git"""
     try:
         # Stage files
-        subprocess.run(['git', 'add', 'groups.config.json', f'{folder_name}/minimal.html'],
+        subprocess.run(['git', 'add', 'groups.config.json', html_filename],
                       check=True, capture_output=True)
 
         # Commit
-        commit_msg = f"""Enhancement #X: Add "{group_name}" group to minimal.html system
+        commit_msg = f"""Enhancement: Add "{group_name}" group to minimal.html system
 
 - Configure {group_name} in groups.config.json
-- Generate {folder_name}/minimal.html from template
-- Ready for deployment
+- Generate {group_name}.html from template
+- Ready for deployment at: https://avecsimplicite.github.io/naas/{group_name}.html
 
 🤖 Generated with Claude Code
 
@@ -221,10 +221,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"""
         return False
 
 
-def get_deployed_url(folder_name):
+def get_deployed_url(html_filename):
     """Generate the deployed URL for the group"""
     # Assuming GitHub Pages deployment to avecsimplicite/naas
-    return f"https://avecsimplicite.github.io/naas/{folder_name}/minimal.html"
+    return f"https://avecsimplicite.github.io/naas/{html_filename}"
 
 
 def main():
@@ -287,7 +287,7 @@ def main():
     print(f"  Sheet URL:         {Colors.BOLD}{sheet_url[:50]}...{Colors.ENDC}")
     print(f"  Group website:     {Colors.BOLD}{group_url}{Colors.ENDC}")
     print(f"  Download name:     {Colors.BOLD}{download_name}{Colors.ENDC}")
-    print(f"  Output folder:     {Colors.BOLD}{group_name}_static/{Colors.ENDC}")
+    print(f"  Output file:       {Colors.BOLD}{group_name}.html{Colors.ENDC}")
 
     proceed = prompt("\nProceed with setup? (yes/no)", "yes")
     if proceed.lower() not in ['yes', 'y']:
@@ -303,8 +303,8 @@ def main():
         "description": f"Publications for {display_name}",
         "googleSheetUrl": sheet_url,
         "groupSiteUrl": group_url,
-        "outputFolder": f"{group_name}_static",
-        "filename": "minimal.html",
+        "outputFolder": ".",
+        "filename": f"{group_name}.html",
         "downloadName": download_name
     }
 
@@ -329,7 +329,8 @@ def main():
 
     # Step 8: Commit and push
     print_info("Committing and pushing to main...")
-    if git_commit_and_push(group_name, group_config['outputFolder']):
+    html_filename = group_config['filename']
+    if git_commit_and_push(group_name, html_filename):
         print_success("Committed and pushed to main")
     else:
         print_warning("Could not auto-push. Please run: git push")
@@ -337,7 +338,7 @@ def main():
     # Final summary
     print("\n" + "─" * 50)
     print_header(f"✨ {group_name} is ready!")
-    deployed_url = get_deployed_url(group_config['outputFolder'])
+    deployed_url = get_deployed_url(html_filename)
     print(f"Live URL: {Colors.BOLD}{deployed_url}{Colors.ENDC}")
     print(f"\nThe page will be available shortly after GitHub Pages rebuilds.")
     print(f"Check: https://github.com/avecsimplicite/naas/deployments")

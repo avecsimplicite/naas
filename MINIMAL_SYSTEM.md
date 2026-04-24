@@ -9,10 +9,10 @@ naas/
 ├── groups.config.json           # Configuration for all groups
 ├── minimal.template.html         # Base template with placeholders
 ├── generate_minimal.py           # Generator script
-├── o_static/                     # NAAS output folder
-│   └── minimal.html             # Generated for NAAS
-├── onqt_static/                 # ONQT output folder (example)
-│   └── minimal.html             # Generated for ONQT
+├── setup_new_group.py            # Interactive setup script
+├── naas.html                     # Generated for NAAS
+├── onqt.html                     # Generated for ONQT
+├── {groupname}.html              # Additional groups...
 └── MINIMAL_SYSTEM.md            # This file
 ```
 
@@ -31,7 +31,7 @@ The script will:
 2. ✅ Ask for display name
 3. ✅ Ask for Google Sheet URL (validates it's published)
 4. ✅ Ask for group website URL
-5. ✅ Generate `minimal.html` automatically
+5. ✅ Generate `{groupname}.html` automatically in root
 6. ✅ Update `groups.config.json`
 7. ✅ Commit and push to main
 8. ✅ Show you the final deployed URL
@@ -46,11 +46,11 @@ Google Sheet URL: https://docs.google.com/spreadsheets/d/e/2PACX-1v.../pub?gid=1
 Group website URL (e.g., 'https://mygroup.example.com'): https://mycommunity.example.com
 
 ✅ Updated groups.config.json
-✅ Generated mycommunity_static/minimal.html
+✅ Generated mycommunity.html in root
 ✅ Committed and pushed to main
 
 ✨ mycommunity is ready!
-Live URL: https://avecsimplicite.github.io/naas/mycommunity_static/minimal.html
+Live URL: https://avecsimplicite.github.io/naas/mycommunity.html
 ```
 
 ---
@@ -141,16 +141,22 @@ The template (`minimal.template.html`) contains these replaceable placeholders:
 
 ## File Organization by Group
 
-Each group keeps its own folder structure:
+Each group gets its own file in the root:
 ```
-{groupname}_static/
-└── minimal.html        # Generated file, ready to publish
+{groupname}.html       # Generated file, ready to publish
+```
+
+For example:
+```
+naas.html              # NAAS group page
+onqt.html              # ONQT group page
+mygroup.html           # Additional groups...
 ```
 
 This makes it easy to:
-- Deploy each group independently
-- Version control separately
-- Update one group without affecting others
+- Clean, simple file structure
+- Short, memorable URLs
+- Quick deployment without nested folders
 
 ## Troubleshooting
 
@@ -189,11 +195,11 @@ All groups will get the improvements automatically!
 python generate_minimal.py naas onqt
 
 # Commit and push
-git add groups.config.json o_static/minimal.html onqt_static/minimal.html
-git commit -m "Generate minimal.html for NAAS and ONQT"
+git add groups.config.json naas.html onqt.html
+git commit -m "Generate naas.html and onqt.html for NAAS and ONQT groups"
 git push
 
 # Each group's HTML is now ready at:
-# - https://avecsimplicite.github.io/naas/o_static/minimal.html
-# - https://avecsimplicite.github.io/naas/onqt_static/minimal.html
+# - https://avecsimplicite.github.io/naas/naas.html
+# - https://avecsimplicite.github.io/naas/onqt.html
 ```

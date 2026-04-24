@@ -78,7 +78,7 @@ python setup_new_group.py
 # - Group website: https://mygroup.example.com
 
 # Done! Your page is live at:
-# https://avecsimplicite.github.io/naas/mycommunity_static/minimal.html
+# https://avecsimplicite.github.io/naas/mycommunity.html
 ```
 
 **Features:**
@@ -87,6 +87,7 @@ python setup_new_group.py
 - ✅ Link back to your group website
 - ✅ Mobile-friendly responsive design
 - ✅ Multiple groups in one repository
+- ✅ **Clean, short URLs** (no nested folders)
 
 👉 **See [MINIMAL_SYSTEM.md](./MINIMAL_SYSTEM.md) for complete documentation**
 
@@ -614,12 +615,16 @@ naas/
 ├── groups.config.json               # Configuration for all groups
 ├── minimal.template.html            # Reusable HTML template
 ├── MINIMAL_SYSTEM.md                # Complete system documentation
+│
+├── 📄 GROUP PAGES (Generated files)
+├── naas.html                        # NAAS group page
+├── onqt.html                        # ONQT group page
+├── {groupname}.html                 # Additional groups...
+│
 ├── o_static/
-│   └── minimal.html                 # NAAS group page
-├── onqt_static/
-│   └── minimal.html                 # ONQT group page
-├── {groupname}_static/
-│   └── minimal.html                 # Additional groups...
+│   ├── index.html                   # Original NAAS content
+│   ├── embed.html                   # Original embed content
+│   └── README.md                    # Original documentation
 │
 ├── examples/
 │   ├── basic_capture.py             # Simple usage example
@@ -634,7 +639,7 @@ naas/
     └── API.md                       # API reference
 ```
 
-### New Components (Minimal HTML System)
+### Minimal HTML System Components
 
 | File | Purpose |
 |------|---------|
@@ -643,6 +648,14 @@ naas/
 | `groups.config.json` | Centralized configuration for all groups |
 | `minimal.template.html` | Single source of truth for the HTML template |
 | `MINIMAL_SYSTEM.md` | Complete documentation for the reusable system |
+
+### Live URLs
+
+| Group | URL |
+|-------|-----|
+| NAAS | https://avecsimplicite.github.io/naas/naas.html |
+| ONQT | https://avecsimplicite.github.io/naas/onqt.html |
+| Custom Groups | https://avecsimplicite.github.io/naas/{groupname}.html |
 
 ---
 
