@@ -1,4 +1,4 @@
-name: Deploy o_static to GitHub Pages
+name: Deploy minimal.html pages to GitHub Pages
 
 on:
   push:
@@ -17,10 +17,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Upload o_static as Pages artifact
+      - name: Upload site root as Pages artifact (includes all group folders)
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./o_static
+          path: ./
 
   pages-deploy:
     needs: deploy
