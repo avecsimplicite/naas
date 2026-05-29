@@ -22,6 +22,8 @@
     .spinner{display:inline-block;width:24px;height:24px;border:3px solid #f3f3f3;border-top:3px solid #007bff;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
     .loading-text{font-size:16px;color:#007bff;font-weight:500}
+    .section-label{font-size:14px;font-weight:600;color:#444;margin:16px 0 8px}
+    #sheet-iframe{width:100%;min-width:320px;height:600px;border:1px solid #ddd;border-radius:6px}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -35,6 +37,11 @@
     <div class="button-group" id="button-group" style="display:none">
       <a href="https://sites.google.com/jgwill.com/onqt/home" target="_blank" class="btn">🔙 Retour au site du groupe</a>
       <button id="download" class="btn">⬇️ Download PNG</button>
+    </div>
+    <div id="colored-view" style="display:none">
+      <div class="section-label">🎨 Vue colorée (feuille en direct)</div>
+      <iframe id="sheet-iframe" title="Feuille onqt colorée" frameborder="0"></iframe>
+      <div class="section-label">📄 Version pour téléchargement PNG (sans couleurs)</div>
     </div>
     <div id="table-container"></div>
   </div>
@@ -194,8 +201,19 @@ btn.addEventListener('click', async ()=>{
   finally{ btn.disabled = false; }
 });
 
+// Colored live view: embed the published Google Sheet (preserves manual cell
+// colors that the CSV export drops). The CSV table below feeds the PNG export.
+function setupColoredView(){
+  try{
+    const embedUrl = DEFAULT_URL.replace('/pub?', '/pubhtml?').replace(/&+$/, '') + '&widget=true&headers=false';
+    const iframe = document.getElementById('sheet-iframe');
+    const view = document.getElementById('colored-view');
+    if(iframe && view){ iframe.src = embedUrl; view.style.display = 'block'; }
+  }catch(e){ console.warn('colored view setup failed', e); }
+}
+
 // Auto-load on page load
-window.addEventListener('load', loadAndDisplay);
+window.addEventListener('load', () => { setupColoredView(); loadAndDisplay(); });
 </script>
 </body>
 </html>
