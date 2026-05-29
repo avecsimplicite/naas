@@ -62,10 +62,36 @@ function makeCsvUrl(publishedUrl){
   catch(e){ return publishedUrl.includes('?') ? publishedUrl + '&output=csv' : publishedUrl + '?output=csv'; }
 }
 
-function renderTable(rows, displayOnScreen=false){
+// Marathon-specific cleanup: the source sheet has no header row, a leading
+// empty row, a meta/title row and a long instructions paragraph mixed into the
+// data. We strip those, capture the title, and provide proper column headers.
+const MARATHON_HEADER = ['Host 1', 'Host 2', 'Host 3'];
+function preprocessRows(rows){
+  let title = 'Liste de host marathon';
+  const data = [];
+  (rows||[]).forEach(r => {
+    const cells = (r||[]).map(c => (c==null?'':String(c)).trim());
+    const joined = cells.join('').trim();
+    if(!joined) return;                                   // skip empty rows
+    if(/mise\s*à\s*jour/i.test(joined)){                   // capture title + date
+      title = cells.filter(Boolean).join(' — ');
+      return;
+    }
+    if(joined.length > 80 || /liste des membres/i.test(joined)) return; // drop instructions blob
+    data.push(cells);
+  });
+  return { title, rows: [MARATHON_HEADER, ...data] };
+}
+
+function renderTable(rawRows, displayOnScreen=false){
   const targetEl = displayOnScreen ? document.getElementById('table-container') : off;
   targetEl.innerHTML = '';
+  const { title, rows } = preprocessRows(rawRows);
   const table = document.createElement('table');
+  const caption = document.createElement('caption');
+  caption.textContent = title;
+  caption.style.cssText = 'font-size:16px;font-weight:600;padding:10px 0;color:#222;caption-side:top;text-align:left';
+  table.appendChild(caption);
   const thead = document.createElement('thead');
   const tbody = document.createElement('tbody');
   if(!rows || rows.length===0){ targetEl.textContent='No data'; return table; }
