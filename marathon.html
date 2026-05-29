@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Download PNG — MARATHON</title>
+  <style>
+    html,body{height:100%;margin:0}
+    body{display:flex;align-items:center;justify-content:center;font-family:Arial,Helvetica,sans-serif;background:#f6f6f6;padding:20px}
+    .container{background:#fff;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.1);padding:24px;max-width:90%;overflow-x:auto}
+    .btn{background:#007bff;color:#fff;border:none;padding:12px 24px;font-size:14px;border-radius:6px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);margin-right:8px}
+    .btn:hover{background:#0056b3}
+    .status{position:fixed;left:16px;bottom:16px;font-size:13px;color:#666;background:#fff;padding:8px 12px;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+    /* offscreen container used to render table for screenshot */
+    #offscreen { position: absolute; left: -9999px; top: 0; width: fit-content; display: inline-block; }
+    table{border-collapse:collapse;background:#fff;margin:0}
+    table th, table td{border:1px solid #ddd;padding:8px 12px;text-align:left}
+    table th{background:#f8f9fa;font-weight:600}
+    #table-container{margin:0}
+    .button-group{margin-bottom:16px;display:flex;gap:8px}
+    .loading-spinner{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
+    .spinner{display:inline-block;width:24px;height:24px;border:3px solid #f3f3f3;border-top:3px solid #007bff;border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+    .loading-text{font-size:16px;color:#007bff;font-weight:500}
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <div id="loading" class="loading-spinner">
+      <div class="spinner"></div>
+      <div class="loading-text">Traitement en cours...</div>
+    </div>
+    <div class="button-group" id="button-group" style="display:none">
+      <a href="https://sites.google.com/jgwill.com/onqt/home" target="_blank" class="btn">🔙 Retour au site du groupe</a>
+      <button id="download" class="btn">⬇️ Download PNG</button>
+    </div>
+    <div id="table-container"></div>
+  </div>
+  <div class="status" id="status">Loading...</div>
+
+  <div id="offscreen" aria-hidden="true"></div>
+
+<script>
+// Minimal single-click downloader
+const DEFAULT_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwQlD3KQvVzz2V4akqxdkwFn5ppxJo-od7oQjgd_a7EkdrJPIGbbuwKY8p6CiLZMLmOirt8KIOfjzY/pub?single=true&";
+const PROXY = 'https://api.allorigins.win/raw?url='; // fallback proxy
+const DOWNLOAD_FILENAME = "marathon";
+const statusEl = document.getElementById('status');
+const off = document.getElementById('offscreen');
+const btn = document.getElementById('download');
+const loadingEl = document.getElementById('loading');
+const buttonGroupEl = document.getElementById('button-group');
+
+function setStatus(s){ statusEl.textContent = s; }
+function showLoading(){ if(loadingEl) loadingEl.style.display = 'flex'; if(buttonGroupEl) buttonGroupEl.style.display = 'none'; }
+function hideLoading(){ if(loadingEl) loadingEl.style.display = 'none'; if(buttonGroupEl) buttonGroupEl.style.display = 'flex'; }
+
+function makeCsvUrl(publishedUrl){
+  try{ const u = new URL(publishedUrl); u.searchParams.set('output','csv'); return u.toString(); }
+  catch(e){ return publishedUrl.includes('?') ? publishedUrl + '&output=csv' : publishedUrl + '?output=csv'; }
+}
+
+function renderTable(rows, displayOnScreen=false){
+  const targetEl = displayOnScreen ? document.getElementById('table-container') : off;
+  targetEl.innerHTML = '';
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const tbody = document.createElement('tbody');
+  if(!rows || rows.length===0){ targetEl.textContent='No data'; return table; }
+  const header = rows[0];
+  const hr = document.createElement('tr');
+  header.forEach(h => { const th = document.createElement('th'); th.textContent = h; hr.appendChild(th); });
+  thead.appendChild(hr);
+  for(let i=1;i<rows.length;i++){ const r = rows[i]; const tr = document.createElement('tr'); r.forEach(c=>{ const td=document.createElement('td'); td.textContent = c; tr.appendChild(td); }); tbody.appendChild(tr); }
+  table.appendChild(thead); table.appendChild(tbody); targetEl.appendChild(table); return table;
+}
+
+async function tryFetchCsv(csvUrl){
+  try{
+    setStatus('Fetching CSV...');
+    const res = await fetch(csvUrl);
+    if(!res.ok) throw new Error('Fetch failed: '+res.status);
+    const txt = await res.text();
+    const parsed = Papa.parse(txt.trim());
+    return parsed.data;
+  }catch(e){ console.warn('fetch failed',e); throw e; }
+}
+
+function extractIdsFromUrl(url){
+  try{ const u = new URL(url); const m = u.pathname.match(/\/d\/([a-zA-Z0-9-_]+)/); const id = m?m[1]:null; const gid = u.searchParams.get('gid')||null; return {id,gid}; }catch(e){return {id:null,gid:null}} }
+
+function loadViaGvizScript(publishedUrl){
+  return new Promise((resolve,reject)=>{
+    const {id,gid} = extractIdsFromUrl(publishedUrl);
+    if(!id) return reject(new Error('No spreadsheet id found'));
+    const sheetGid = gid||'0';
+    const src = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?gid=${sheetGid}&tqx=out:json`;
+    // handler will be invoked by the gviz script
+    const handler = function(resp){
+      try{
+        const cols = (resp.table && resp.table.cols)||[]; const rows = (resp.table && resp.table.rows)||[];
+        const header = cols.map(c=> (c && (c.label||c.id))||''); const data=[header];
+        rows.forEach(r=>{ const cells=(r.c||[]).map(cell=> (cell && (cell.v!=null?cell.v:''))||''); data.push(cells); });
+        resolve(data);
+      }catch(err){ reject(err); }
+      finally{ if(script && script.parentNode) script.parentNode.removeChild(script); delete window.google?.visualization?.Query?.setResponse; }
+    };
+    window.google = window.google||{}; window.google.visualization = window.google.visualization||{};
+    window.google.visualization.Query = window.google.visualization.Query || {};
+    window.google.visualization.Query.setResponse = handler;
+    const script = document.createElement('script'); script.src = src; script.onerror = ()=>{ script.remove(); reject(new Error('gviz load error')); }; document.head.appendChild(script);
+  });
+}
+
+async function renderAndDownload(rows){
+  setStatus('Rendering table...');
+  const table = renderTable(rows);
+  // allow layout to settle
+  await new Promise(r=>setTimeout(r,150));
+  setStatus('Converting to PNG...');
+  try{
+    const canvas = await html2canvas(table, {
+      scale: 1.5,
+      backgroundColor: '#ffffff',
+      useCORS: true,
+      allowTaint: true,
+      logging: false
+    });
+    console.log('Canvas size:', canvas.width, 'x', canvas.height);
+    const padding = 4;
+    const padded = document.createElement('canvas');
+    padded.width = canvas.width + padding*2;
+    padded.height = canvas.height + padding*2;
+    const ctx = padded.getContext('2d');
+    ctx.fillStyle='#ffffff';
+    ctx.fillRect(0,0,padded.width,padded.height);
+    ctx.drawImage(canvas,padding,padding);
+    padded.toBlob(function(blob){
+      const a = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      a.href = url;
+      a.download = (new Date()).toISOString().slice(0,10)+'_' + DOWNLOAD_FILENAME + '.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setStatus('Done! Check your Downloads folder.');
+    }, 'image/png');
+  }catch(err){
+    console.error('Canvas error:', err);
+    setStatus('Error converting to PNG: '+err.message);
+  }
+}
+
+async function loadAndDisplay(){
+  showLoading();
+  const csvUrl = makeCsvUrl(DEFAULT_URL);
+  try{
+    try{ const rows = await tryFetchCsv(csvUrl); renderTable(rows, true); hideLoading(); return; }catch(e1){ console.warn('direct fetch failed',e1); }
+    try{ const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl)); renderTable(rows, true); hideLoading(); return; }catch(e2){ console.warn('proxy failed', e2); }
+    try{ const rows = await loadViaGvizScript(DEFAULT_URL); renderTable(rows, true); hideLoading(); return; }catch(e3){ console.warn('gviz failed', e3); throw new Error('All methods failed'); }
+  }catch(err){
+    hideLoading();
+    setStatus('Failed: '+err.message);
+    console.error(err);
+  }
+}
+
+btn.addEventListener('click', async ()=>{
+  btn.disabled = true; setStatus('Starting...');
+  const csvUrl = makeCsvUrl(DEFAULT_URL);
+  try{
+    // 1) try direct fetch
+    try{
+      const rows = await tryFetchCsv(csvUrl);
+      await renderAndDownload(rows);
+      return;
+    }catch(e1){ console.warn('direct fetch failed',e1); }
+    // 2) try proxy
+    try{
+      const rows = await tryFetchCsv(PROXY + encodeURIComponent(csvUrl));
+      await renderAndDownload(rows);
+      return;
+    }catch(e2){ console.warn('proxy fetch failed', e2); }
+    // 3) try gviz script
+    try{
+      const rows = await loadViaGvizScript(DEFAULT_URL);
+      await renderAndDownload(rows);
+      return;
+    }catch(e3){ console.warn('gviz failed', e3); throw new Error('All loading methods failed'); }
+  }catch(err){ setStatus('Failed: '+err.message); alert('Failed to load sheet. See console for details.'); }
+  finally{ btn.disabled = false; }
+});
+
+// Auto-load on page load
+window.addEventListener('load', loadAndDisplay);
+</script>
+</body>
+</html>

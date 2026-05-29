@@ -17,6 +17,15 @@
       "outputFolder": ".",
       "filename": "onqt.html",
       "downloadName": "publications_onqt"
+    },
+    "marathon": {
+      "name": "MARATHON",
+      "description": "Liste de host marathon",
+      "googleSheetUrl": "https://docs.google.com/spreadsheets/d/e/2PACX-1vTwQlD3KQvVzz2V4akqxdkwFn5ppxJo-od7oQjgd_a7EkdrJPIGbbuwKY8p6CiLZMLmOirt8KIOfjzY/pub?single=true&",
+      "groupSiteUrl": "https://sites.google.com/jgwill.com/onqt/home",
+      "outputFolder": ".",
+      "filename": "marathon.html",
+      "downloadName": "marathon"
     }
   }
 }
